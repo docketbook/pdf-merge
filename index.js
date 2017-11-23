@@ -30,7 +30,7 @@ module.exports = (files, options) => new Promise((resolve, reject) => {
 		return;
 	}
 
-	if(files.length === 1) {
+	if((files.length === 1) && (files[0].indexOf('*') === -1)) {
 		reject(new Error('You need at least two files in order to merge PDF documents.'));
 
 		return;
@@ -49,6 +49,10 @@ module.exports = (files, options) => new Promise((resolve, reject) => {
 		isWindows
 			? file
 			: shellescape([file.replace(/\\/g, '/')])
+	).map((file) => 
+		file.indexOf('*') !== -1
+			? file.substring(1, file.length - 1)
+			: file
 	).concat(['cat', 'output', tmpFilePath]);
 
 	const childPromise = (isWindows && options.libPath !== 'pdftk')
