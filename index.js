@@ -15,6 +15,18 @@ const writeFile = Promise.promisify(fs.writeFile);
 
 const isWindows = os.platform() === 'win32';
 
+function isBufferOutput(options) {
+	return (options.output === Buffer || String(options.output).toUpperCase() === 'BUFFER');
+}
+
+function isStreamOutput(options) {
+	return (options.output === PassThrough || ['STREAM', 'READSTREAM'].indexOf(String(options.output).toUpperCase()) !== -1);	
+}
+
+function isFileOutput(options) {
+	return !isBufferOutput(options) && !isStreamOutput(options);
+}
+
 module.exports = (files, options) => new Promise((resolve, reject) => {
 	if(!Array.isArray(files)) {
 		reject(new TypeError('Expected files to be an array of paths to PDF files.'));
@@ -41,9 +53,15 @@ module.exports = (files, options) => new Promise((resolve, reject) => {
 		output:  Buffer,
 	}, options);
 
-	const tmpFilePath = isWindows
+	let tmpFilePath = isWindows
 		? tmp.tmpNameSync()
 		: shellescape([tmp.tmpNameSync()]);
+
+	if (isFileOutput(options)) {
+		tmpFilePath = isWindows
+		? options.output
+		: shellescape([options.output]);
+	}
 
 	const args = files.map((file) =>
 		isWindows
@@ -58,6 +76,10 @@ module.exports = (files, options) => new Promise((resolve, reject) => {
 	const childPromise = (isWindows && options.libPath !== 'pdftk')
 		? execFile(options.libPath, args)
 		: exec(`${options.libPath} ${args.join(' ')}`);
+
+	if (isFileOutput(options)) {
+		return childPromise.then(resolve).catch(reject);
+	}
 
 	childPromise
 		.then(() =>
