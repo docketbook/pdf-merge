@@ -91,20 +91,17 @@ module.exports = (files, options) => new Promise((resolve, reject) => {
 			})
 		)
 		.then((buffer) => {
-			if(options.output === Buffer || String(options.output).toUpperCase() === 'BUFFER') {
+			if(isBufferOutput(options)) {
 				return buffer;
 			}
 
-			if(options.output === PassThrough || ['STREAM', 'READSTREAM'].indexOf(String(options.output).toUpperCase()) !== -1) {
+			if(isStreamOutput(options)) {
 				const stream = new PassThrough();
 
 				stream.end(buffer);
 
 				return stream;
 			}
-
-			return writeFile(options.output, buffer)
-				.then(() => buffer);
 		})
 		.then(resolve)
 		.catch(reject);
